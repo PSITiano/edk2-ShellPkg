@@ -1,7 +1,7 @@
 /** @file
   Provides interface to advanced shell functionality for parsing both handle and protocol database.
 
-  Copyright (c) 2010 - 2012, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2010 - 2013, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -349,8 +349,8 @@ TxtOutProtocolDumpInformation(
       Temp == NULL?L"":Temp,
       Index == Dev->Mode->Mode ? L'*' : L' ',
       Index,
-      !EFI_ERROR(Status)?Col:-1,
-      !EFI_ERROR(Status)?Row:-1
+      !EFI_ERROR(Status)?(INTN)Col:-1,
+      !EFI_ERROR(Status)?(INTN)Row:-1
      );
   }
   FreePool(Temp);
@@ -438,17 +438,17 @@ DevicePathProtocolDumpInformation(
 //
 #define LOCAL_EFI_WIN_NT_THUNK_PROTOCOL_GUID \
   { \
-    0x58c518b1, 0x76f3, 0x11d4, 0xbc, 0xea, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81 \
+    0x58c518b1, 0x76f3, 0x11d4, { 0xbc, 0xea, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81 } \
   }
 
 #define LOCAL_EFI_WIN_NT_BUS_DRIVER_IO_PROTOCOL_GUID \
   { \
-    0x96eb4ad6, 0xa32a, 0x11d4, 0xbc, 0xfd, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81 \
+    0x96eb4ad6, 0xa32a, 0x11d4, { 0xbc, 0xfd, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81 } \
   }
 
 #define LOCAL_EFI_WIN_NT_SERIAL_PORT_GUID \
   { \
-    0xc95a93d, 0xa006, 0x11d4, 0xbc, 0xfa, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81 \
+    0xc95a93d, 0xa006, 0x11d4, { 0xbc, 0xfa, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81 } \
   }
 STATIC CONST EFI_GUID WinNtThunkProtocolGuid = LOCAL_EFI_WIN_NT_THUNK_PROTOCOL_GUID;
 STATIC CONST EFI_GUID WinNtIoProtocolGuid    = LOCAL_EFI_WIN_NT_BUS_DRIVER_IO_PROTOCOL_GUID;
@@ -776,6 +776,48 @@ GetGuidFromStringName(
 }
 
 /**
+  Get best support language for this driver.
+  
+  First base on the user input language  to search, second base on the current 
+  platform used language to search, third get the first language from the 
+  support language list. The caller need to free the buffer of the best language.
+
+  @param[in] SupportedLanguages      The support languages for this driver.
+  @param[in] InputLanguage           The user input language.
+  @param[in] Iso639Language          Whether get language for ISO639.
+
+  @return                            The best support language for this driver.
+**/
+CHAR8 *
+EFIAPI
+GetBestLanguageForDriver (
+  IN CONST CHAR8  *SupportedLanguages,
+  IN CONST CHAR8  *InputLanguage,
+  IN BOOLEAN      Iso639Language
+  )
+{
+  CHAR8                         *LanguageVariable;
+  CHAR8                         *BestLanguage;
+
+  LanguageVariable = GetVariable (Iso639Language ? L"Lang" : L"PlatformLang", &gEfiGlobalVariableGuid);
+
+  BestLanguage = GetBestLanguage(
+                   SupportedLanguages,
+                   Iso639Language,
+                   (InputLanguage != NULL) ? InputLanguage : "",
+                   (LanguageVariable != NULL) ? LanguageVariable : "",
+                   SupportedLanguages,
+                   NULL
+                   );
+
+  if (LanguageVariable != NULL) {
+    FreePool (LanguageVariable);
+  }
+
+  return BestLanguage;
+}
+
+/**
   Function to retrieve the driver name (if possible) from the ComponentName or
   ComponentName2 protocol
 
@@ -795,6 +837,9 @@ GetStringNameFromHandle(
   EFI_COMPONENT_NAME2_PROTOCOL  *CompNameStruct;
   EFI_STATUS                    Status;
   CHAR16                        *RetVal;
+  CHAR8                         *BestLang;
+
+  BestLang = NULL;
 
   Status = gBS->OpenProtocol(
     TheHandle,
@@ -804,7 +849,12 @@ GetStringNameFromHandle(
     NULL,
     EFI_OPEN_PROTOCOL_GET_PROTOCOL);
   if (!EFI_ERROR(Status)) {
-    Status = CompNameStruct->GetDriverName(CompNameStruct, (CHAR8*)Language, &RetVal);
+    BestLang = GetBestLanguageForDriver (CompNameStruct->SupportedLanguages, Language, FALSE);
+    Status = CompNameStruct->GetDriverName(CompNameStruct, BestLang, &RetVal);
+    if (BestLang != NULL) {
+      FreePool (BestLang);
+      BestLang = NULL;
+    }
     if (!EFI_ERROR(Status)) {
       return (RetVal);
     }
@@ -817,7 +867,11 @@ GetStringNameFromHandle(
     NULL,
     EFI_OPEN_PROTOCOL_GET_PROTOCOL);
   if (!EFI_ERROR(Status)) {
-    Status = CompNameStruct->GetDriverName(CompNameStruct, (CHAR8*)Language, &RetVal);
+    BestLang = GetBestLanguageForDriver (CompNameStruct->SupportedLanguages, Language, FALSE);
+    Status = CompNameStruct->GetDriverName(CompNameStruct, BestLang, &RetVal);
+    if (BestLang != NULL) {
+      FreePool (BestLang);
+    }
     if (!EFI_ERROR(Status)) {
       return (RetVal);
     }

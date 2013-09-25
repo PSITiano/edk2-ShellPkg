@@ -2054,13 +2054,11 @@ ShellCommandRunPci (
   LIST_ENTRY                        *Package;
   CHAR16                            *ProblemParam;
   SHELL_STATUS                      ShellStatus;
-  UINTN                             Size;
   CONST CHAR16                      *Temp;
 
   ShellStatus         = SHELL_SUCCESS;
   Status              = EFI_SUCCESS;
   Address             = 0;
-  Size                = 0;
   IoDev               = NULL;
   HandleBuf           = NULL;
   Package             = NULL;
@@ -2464,13 +2462,11 @@ PciFindProtocolInterface (
 {
   UINTN                             Index;
   EFI_STATUS                        Status;
-  BOOLEAN                           FoundInterface;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Descriptors;
   UINT16                            MinBus;
   UINT16                            MaxBus;
   BOOLEAN                           IsEnd;
 
-  FoundInterface = FALSE;
   //
   // Go through all handles, until the one meets the criteria is found
   //
@@ -2502,17 +2498,12 @@ PciFindProtocolInterface (
       }
 
       if (MinBus <= Bus && MaxBus >= Bus) {
-        FoundInterface = TRUE;
-        break;
+        return EFI_SUCCESS;
       }
     }
   }
 
-  if (FoundInterface) {
-    return EFI_SUCCESS;
-  } else {
-    return EFI_INVALID_PARAMETER;
-  }
+  return EFI_NOT_FOUND;
 }
 
 /**
@@ -3199,7 +3190,7 @@ PciExplainBar (
     } else if ((*Bar & PCI_BIT_1) == 0 && (*Bar & PCI_BIT_2) != 0) {
       Bar64 = 0x0;
       CopyMem (&Bar64, Bar, sizeof (UINT64));
-      ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_ONE_VAR_2), gShellDebug1HiiHandle, RShiftU64 ((Bar64 & 0xfffffffffffffff0ULL), 32));
+      ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_ONE_VAR_2), gShellDebug1HiiHandle, (UINT32) RShiftU64 ((Bar64 & 0xfffffffffffffff0ULL), 32));
       ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_ONE_VAR_3), gShellDebug1HiiHandle, (UINT32) (Bar64 & 0xfffffffffffffff0ULL));
       ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_MEM), gShellDebug1HiiHandle);
       ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_64_BITS), gShellDebug1HiiHandle);
@@ -3299,13 +3290,13 @@ PciExplainBar (
       ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_NEWBAR_32_2), gShellDebug1HiiHandle, NewBar32 + (*Bar & 0xfffffff0) - 1);
 
     } else {
-      ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_RSHIFT), gShellDebug1HiiHandle, RShiftU64 (NewBar64, 32));
+      ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_RSHIFT), gShellDebug1HiiHandle, (UINT32) RShiftU64 (NewBar64, 32));
       ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_RSHIFT), gShellDebug1HiiHandle, (UINT32) NewBar64);
       Print (L"  ");
       ShellPrintHiiEx(-1, -1, NULL,
         STRING_TOKEN (STR_PCI2_RSHIFT),
         gShellDebug1HiiHandle,
-        RShiftU64 ((NewBar64 + (Bar64 & 0xfffffffffffffff0ULL) - 1), 32)
+        (UINT32) RShiftU64 ((NewBar64 + (Bar64 & 0xfffffffffffffff0ULL) - 1), 32)
        );
       ShellPrintHiiEx(-1, -1, NULL,STRING_TOKEN (STR_PCI2_RSHIFT), gShellDebug1HiiHandle, (UINT32) (NewBar64 + (Bar64 & 0xfffffffffffffff0ULL) - 1));
 

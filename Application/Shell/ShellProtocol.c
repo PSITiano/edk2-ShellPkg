@@ -2,7 +2,7 @@
   Member functions of EFI_SHELL_PROTOCOL and functions for creation,
   manipulation, and initialization of EFI_SHELL_PROTOCOL.
 
-  Copyright (c) 2009 - 2012, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2013, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -14,7 +14,6 @@
 **/
 
 #include "Shell.h"
-#include <Library/FileHandleLib.h>
 
 /**
   Close an open file handle.
@@ -646,8 +645,6 @@ EfiShellGetDeviceName(
   UINTN                             LoopVar;
   CHAR16                            *DeviceNameToReturn;
   CHAR8                             *Lang;
-  CHAR8                             *TempChar;
-
   UINTN                             ParentControllerCount;
   EFI_HANDLE                        *ParentControllerBuffer;
   UINTN                             ParentDriverCount;
@@ -704,23 +701,7 @@ EfiShellGetDeviceName(
       if (EFI_ERROR(Status)) {
         continue;
       }
-      if (Language == NULL) {
-        Lang = AllocateZeroPool(AsciiStrSize(CompName2->SupportedLanguages));
-        if (Lang == NULL) {
-          return (EFI_OUT_OF_RESOURCES);
-        }
-        AsciiStrCpy(Lang, CompName2->SupportedLanguages);
-        TempChar = AsciiStrStr(Lang, ";");
-        if (TempChar != NULL){
-          *TempChar = CHAR_NULL;
-        }
-      } else {
-        Lang = AllocateZeroPool(AsciiStrSize(Language));
-        if (Lang == NULL) {
-          return (EFI_OUT_OF_RESOURCES);
-        }
-        AsciiStrCpy(Lang, Language);
-      }
+      Lang = GetBestLanguageForDriver(CompName2->SupportedLanguages, Language, FALSE);
       Status = CompName2->GetControllerName(CompName2, DeviceHandle, NULL, Lang, &DeviceNameToReturn);
       FreePool(Lang);
       Lang = NULL;
@@ -763,23 +744,7 @@ EfiShellGetDeviceName(
           if (EFI_ERROR(Status)) {
             continue;
           }
-          if (Language == NULL) {
-            Lang = AllocateZeroPool(AsciiStrSize(CompName2->SupportedLanguages));
-            if (Lang == NULL) {
-              return (EFI_OUT_OF_RESOURCES);
-            }
-            AsciiStrCpy(Lang, CompName2->SupportedLanguages);
-            TempChar = AsciiStrStr(Lang, ";");
-            if (TempChar != NULL){
-              *TempChar = CHAR_NULL;
-            }
-          } else {
-            Lang = AllocateZeroPool(AsciiStrSize(Language));
-            if (Lang == NULL) {
-              return (EFI_OUT_OF_RESOURCES);
-            }
-            AsciiStrCpy(Lang, Language);
-          }
+          Lang = GetBestLanguageForDriver(CompName2->SupportedLanguages, Language, FALSE);
           Status = CompName2->GetControllerName(CompName2, ParentControllerBuffer[LoopVar], DeviceHandle, Lang, &DeviceNameToReturn);
           FreePool(Lang);
           Lang = NULL;
@@ -977,7 +942,6 @@ InternalOpenFileDevicePath(
   SHELL_FILE_HANDLE               ShellHandle;
   EFI_FILE_PROTOCOL               *Handle1;
   EFI_FILE_PROTOCOL               *Handle2;
-  EFI_DEVICE_PATH_PROTOCOL        *DpCopy;
   FILEPATH_DEVICE_PATH            *AlignedNode;
 
   if (FileHandle == NULL) {
@@ -987,7 +951,6 @@ InternalOpenFileDevicePath(
   Handle1       = NULL;
   Handle2       = NULL;
   Handle        = NULL;
-  DpCopy        = DevicePath;
   ShellHandle   = NULL;
   FilePathNode  = NULL;
   AlignedNode   = NULL;
@@ -1579,7 +1542,7 @@ EfiShellExecute(
   Temp = NULL;
   Size = 0;
   ASSERT((Temp == NULL && Size == 0) || (Temp != NULL));
-  StrnCatGrow(&Temp, &Size, L"Shell.efi ", 0);
+  StrnCatGrow(&Temp, &Size, L"Shell.efi -_exit ", 0);
   StrnCatGrow(&Temp, &Size, CommandLine, 0);
 
   Status = InternalShellExecuteDevicePath(
@@ -3317,8 +3280,9 @@ NotificationFunction(
   )
 {
   EFI_INPUT_KEY Key;
-  if ((KeyData->Key.UnicodeChar == L'c' || KeyData->Key.UnicodeChar == 3) &&
-      (KeyData->KeyState.KeyShiftState == (EFI_SHIFT_STATE_VALID|EFI_LEFT_CONTROL_PRESSED) || KeyData->KeyState.KeyShiftState  == (EFI_SHIFT_STATE_VALID|EFI_RIGHT_CONTROL_PRESSED))
+  if ( ((KeyData->Key.UnicodeChar == L'c') &&
+        (KeyData->KeyState.KeyShiftState == (EFI_SHIFT_STATE_VALID|EFI_LEFT_CONTROL_PRESSED) || KeyData->KeyState.KeyShiftState  == (EFI_SHIFT_STATE_VALID|EFI_RIGHT_CONTROL_PRESSED))) ||
+      (KeyData->Key.UnicodeChar == 3)
       ){ 
     if (ShellInfoObject.NewEfiShellProtocol->ExecutionBreak == NULL) {
       return (EFI_UNSUPPORTED);

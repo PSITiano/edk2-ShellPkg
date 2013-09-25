@@ -100,7 +100,7 @@ TraverseHandleDatabase (
             default:                                    OpenTypeString = StringUnknown;   break;
           }
           HandleIndex     = ConvertHandleToHandleIndex(OpenInfo[OpenInfoIndex].AgentHandle);
-          Name            = GetStringNameFromHandle(OpenInfo[OpenInfoIndex].AgentHandle, "en");
+          Name            = GetStringNameFromHandle(OpenInfo[OpenInfoIndex].AgentHandle, NULL);
           ControllerIndex = ConvertHandleToHandleIndex(OpenInfo[OpenInfoIndex].ControllerHandle);
           if (ControllerIndex != 0) {
             ShellPrintHiiEx(

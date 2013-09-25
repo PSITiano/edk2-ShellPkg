@@ -1,7 +1,7 @@
 /** @file
   Implements editor interface functions.
 
-  Copyright (c) 2005 - 2011, Intel Corporation. All rights reserved. <BR>
+  Copyright (c) 2005 - 2012, Intel Corporation. All rights reserved. <BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -1399,8 +1399,7 @@ INTN                          OriginalMode;
 EFI_EDITOR_GLOBAL_EDITOR      MainEditorConst = {
   &FileBuffer,
   {
-    0,
-    0
+    {0, 0}
   },
   {
     0,
@@ -1503,7 +1502,7 @@ MainEditorInit (
   //
   // below will call the five components' init function
   //
-  Status = MainTitleBarInit (L"UEFI EDIT 2.0");
+  Status = MainTitleBarInit (L"UEFI EDIT");
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN(STR_EDIT_LIBEDITOR_TITLEBAR), gShellDebug1HiiHandle);
     return EFI_LOAD_ERROR;

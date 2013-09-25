@@ -11,10 +11,7 @@
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 
-#include "ConsoleLogger.h"
 #include "Shell.h"
-
-STATIC CONST CHAR16                     mCrLfString[3] = { CHAR_CARRIAGE_RETURN, CHAR_LINEFEED, CHAR_NULL };
 
 /**
   Install our intermediate ConOut into the system table to
@@ -473,7 +470,7 @@ AppendStringToHistory(
             ; Index < ConsoleInfo->ColsPerScreen
             ; Index++
            ){
-          *(ConsoleInfo->Attributes + (CopySize/sizeof(ConsoleInfo->Attributes)) + Index) = ConsoleInfo->HistoryMode.Attribute;
+          *(ConsoleInfo->Attributes + (CopySize/sizeof(ConsoleInfo->Attributes[0])) + Index) = ConsoleInfo->HistoryMode.Attribute;
         }
 
         //
@@ -1028,7 +1025,7 @@ ConsoleLoggerClearScreen (
   // Record console output history
   //
   if (!EFI_ERROR (Status)) {
-    Screen = &ConsoleInfo->Buffer[(ConsoleInfo->ColsPerScreen + 1) * ConsoleInfo->CurrentStartRow];
+    Screen = &ConsoleInfo->Buffer[(ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->CurrentStartRow];
     Attributes = &ConsoleInfo->Attributes[ConsoleInfo->ColsPerScreen * ConsoleInfo->CurrentStartRow];
     for ( Row = ConsoleInfo->OriginalStartRow
         ; Row < (ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)
@@ -1046,7 +1043,7 @@ ConsoleLoggerClearScreen (
       //
       // Skip the NULL on each column end in text buffer only
       //
-      Screen++;
+      Screen += 2;
     }
     ConsoleInfo->HistoryMode.CursorColumn = 0;
     ConsoleInfo->HistoryMode.CursorRow    = 0;
